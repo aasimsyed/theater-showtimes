@@ -1,6 +1,5 @@
 import csv
 import calendar
-from datetime import datetime, timedelta
 
 weekdays = [day.lower() for day in calendar.day_name]
 
