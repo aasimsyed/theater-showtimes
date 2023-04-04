@@ -29,7 +29,7 @@ def calculate_showtimes_for_movie(movie, opening_time, closing_time):
         start_minutes = previous_end_minutes - runtime_minutes
         start_minutes -= start_minutes % 5
         showtimes.append((
-            minutes_to_time(start_minutes), 
+            minutes_to_time(start_minutes),
             minutes_to_time(start_minutes + runtime_minutes)))
         previous_end_minutes -= (runtime_minutes + 36)
 
