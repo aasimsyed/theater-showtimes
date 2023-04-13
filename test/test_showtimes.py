@@ -1,10 +1,4 @@
 """Test cases for the calculate_showtimes function."""
-import os
-import sys
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-src_dir = os.path.join(parent_dir, "src")
-sys.path.append(src_dir)
 from movie import Movie
 from calculate_showtimes import calculate_showtimes
 from utilities import str_to_time as st
@@ -12,7 +6,6 @@ from utilities import parse_run_time as prt
 
 def test_single_movie_single_day():
     """Test case for a single movie and single day with valid showtimes."""
-    # Test case for a single movie and single day with valid showtimes
 
     # Prepare the movie data
     movie_data = [
