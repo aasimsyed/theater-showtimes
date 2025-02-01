@@ -1,39 +1,61 @@
-"""This module contains utility functions for the project."""
-import csv
-import calendar
-from datetime import datetime
+"""Utility functions for the theater showtimes application."""
+from datetime import datetime, time
+from typing import List
 
-# Get a list of the days of the week
-weekdays = [day.lower() for day in calendar.day_name]
+# List of weekdays starting with Monday
+weekdays: List[str] = [
+    "monday", "tuesday", "wednesday", "thursday", 
+    "friday", "saturday", "sunday"
+]
 
-def is_valid_csv(file_path):
-    """Returns True if the file is a valid movie list CSV file, False otherwise."""
-    required_columns = {"Movie Title", "Release Year", "MPAA Rating", "Run Time"}
+def str_to_time(time_str: str) -> time:
+    """
+    Convert a string in format '8:00am' to a time object.
+    
+    Args:
+        time_str: Time string in 12-hour format (e.g., '8:00am' or '8:00 am')
+        
+    Returns:
+        datetime.time object
+        
+    Raises:
+        ValueError: If the time format is invalid
+    """
     try:
-        with open(file_path, "r", encoding="utf-8") as file:
-            reader = csv.DictReader(file, skipinitialspace=True)
-            header = set(reader.fieldnames)
-            if header != required_columns:
-                raise ValueError(f"{file_path} is not a valid movie list CSV file")
-            csv.Sniffer().sniff(file.read(1024))
-            return True
-    except (csv.Error, ValueError) as error:
-        raise ValueError(f"{file_path} is not a valid movie list CSV file") from error
+        # Extract just the time part if day is included
+        if any(day.lower() in time_str.lower() for day in weekdays):
+            time_str = time_str.split(" ")[-1]
+            
+        # Handle both formats: "8:00am" and "8:00 am"
+        time_str = time_str.strip().replace(" ", "")
+        return datetime.strptime(time_str, "%I:%M%p").time()
+    except ValueError as e:
+        raise ValueError(f"Invalid time format: {time_str}") from e
 
-def time_to_minutes(time_obj):
-    """Converts a datetime.time object to minutes."""
-    return time_obj.hour * 60 + time_obj.minute
+def time_to_minutes(t: time) -> int:
+    """
+    Convert a time object to minutes since midnight.
+    
+    Args:
+        t: Time object to convert
+        
+    Returns:
+        Number of minutes since midnight
+    """
+    return t.hour * 60 + t.minute
 
-def minutes_to_time(minutes):
-    """Converts minutes to a datetime.time object."""
+def minutes_to_time(minutes: int) -> time:
+    """
+    Convert minutes since midnight to a time object.
+    
+    Args:
+        minutes: Number of minutes since midnight
+        
+    Returns:
+        datetime.time object
+    """
+    # Handle wrapping around midnight
+    minutes = minutes % (24 * 60)  # Wrap to 24-hour period
     hours = minutes // 60
-    remaining_minutes = minutes % 60
-    return f"{hours}:{remaining_minutes:02d}"
-
-def str_to_time(time_str):
-    """Parses a string in the format HH:MMam/pm and returns a datetime.time object."""
-    return datetime.strptime(time_str, '%I:%M%p').time()
-
-def parse_run_time(run_time_str):
-    """Parses a string in the format HH:MM and returns a datetime.time object."""
-    return datetime.strptime(run_time_str.strip(), "%I:%M").time()
+    mins = minutes % 60
+    return time(hour=hours, minute=mins)

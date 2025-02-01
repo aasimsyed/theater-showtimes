@@ -1,8 +1,8 @@
 """Test cases for the calculate_showtimes function."""
-from movie import Movie
-from calculate_showtimes import calculate_showtimes
-from utilities import str_to_time as st
-from utilities import parse_run_time as prt
+from src.movie import Movie
+from src.calculate_showtimes import calculate_showtimes
+from src.utilities import str_to_time as st
+from src.movie_list_parser import parse_runtime as prt
 
 def test_single_movie_single_day():
     """Test case for a single movie and single day with valid showtimes."""

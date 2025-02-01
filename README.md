@@ -1,47 +1,70 @@
-# Theater Showtimes
+# Theater Showtimes Calculator
 
-Theater Showtimes is a command-line application that helps movie theaters generate showtime schedules for their movies. This application reads movie information from a text file and calculates showtimes based on the theater's hours of operation.
+Calculate optimal movie showtimes for a theater based on operating hours.
 
-## Configuration
+## Features
 
-The application requires two text files:
+- Parse movie lists with titles, ratings, and runtimes
+- Handle theater operating hours by day of week
+- Calculate optimal showtimes with cleanup periods
+- Support multiple movies per day
+- Validate time formats and ranges
 
-1. **movies.txt**: This file should contain movie information in a comma-separated format. Each line should have the following fields: Movie Title, Release Year, MPAA Rating, and Run Time.
-
-Example:
-
-```csv
-Movie Title, Release Year, MPAA Rating, Run Time
-There's Something About Mary, 1998, R, 2:14
-How to Lose a Guy in 10 Days, 2003, PG-13, 1:56
-Knocked Up, 2007, R, 2:08
-```
-
-2. **hours.txt**: This file should contain the theater's hours of operation in the following format:
-
-```txt
-Monday - Thursday 8:00am - 11:00pm
-Friday - Sunday 10:30am - 11:30pm
-```
-
-## Usage
-
-To use the application, first, make sure you have Python installed on your system. Then, follow these steps:
+## Installation
 
 1. Clone the repository:
 
 ```bash
-git clone <https://github.com/your-username/theater-showtimes.git>
-```
-
-2. Navigate to the project directory:
-```bash
+git clone https://github.com/username/theater-showtimes.git
 cd theater-showtimes
 ```
 
-3. Run the application with the movies and hours text files as arguments:
+2. Create and activate virtual environment:
+
 ```bash
-./theater_showtimes.py movies.txt
+python -m venv venv
+source venv/bin/activate  # Unix
+venv\Scripts\activate     # Windows
 ```
 
-The application will read the movie and theater hours data from the input files and display the calculated showtimes in the terminal.
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+1. Create a movies CSV file:
+
+```csv
+Movie Title,Release Year,MPAA Rating,Run Time
+Test Movie,2023,PG-13,2:00
+```
+
+2. Create a theater hours text file:
+
+```text
+Monday - Friday 9:00am - 11:30pm
+Saturday - Sunday 12:00pm - 11:59pm
+```
+
+3. Run the calculator:
+
+```bash
+python -m src.main movies.csv hours.txt
+```
+
+## Testing
+
+Run tests with pytest:
+
+```bash
+python -m pytest
+```
+
+## License
+
+[MIT][license]
+
+[license]: ./LICENSE

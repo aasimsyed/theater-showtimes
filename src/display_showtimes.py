@@ -1,33 +1,22 @@
 """Displays the showtimes for today's movies."""
 
-from datetime import datetime
-from utilities import weekdays
+from datetime import time
+from typing import Dict, List
 
-def display_showtimes(showtimes):
-    """Displays the showtimes for today's movies."""
-    # Get the current day of the week
-    today_date = datetime.today()
-    today = weekdays[today_date.weekday()].capitalize()
-
-    if today in showtimes:
-        # Print the day and date
-        date_string = (f"{today_date.month}/"
-                        f"{today_date.day}/"
-                        f"{today_date.year}")
-        print(f"{today} {date_string}\n")
-
-        # Get the movies for today
-        movies = showtimes[today]
-
-        # Print each movie's showtimes
-        for title in movies:
-            # Print the movie title and runtime
-            print(f"{title}")
-
-            # Print each showtime for this movie on this day
-            for show_start, show_end in movies[title]:
-                print(f"  {show_start} - {show_end}")
-
-            print()
-    else:
-        print(f"No showtimes available for {today}.")
+def display_showtimes(showtimes: Dict[str, Dict[str, List[time]]]) -> None:
+    """
+    Display the calculated showtimes in a formatted way.
+    
+    Args:
+        showtimes: Dictionary mapping days to dictionaries of movie titles to lists of showtime start times
+    """
+    if not showtimes:
+        print("No showtimes available.")
+        return
+        
+    for day, movies in sorted(showtimes.items()):
+        print(f"\n{day}:")
+        for movie, times in sorted(movies.items()):
+            time_strs = [t.strftime("%I:%M %p") for t in sorted(times)]
+            print(f"  {movie}:")
+            print(f"    {', '.join(time_strs)}")
