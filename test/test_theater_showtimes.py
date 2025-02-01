@@ -2,7 +2,7 @@
 from datetime import time, datetime, timedelta
 import pytest
 from src.movie import Movie
-from src.hours_parser import parse_hours_file, TimeRange
+from src.hours_parser import parse_hours_file, TimeRange, parse_time_range
 from src.movie_list_parser import parse_movie_list
 from src.calculate_showtimes import (
     calculate_showtimes,
@@ -155,13 +155,13 @@ class TestHoursParser:
         )
         hours = parse_hours_file(str(hours_file))
         assert len(hours) == 3
-        assert hours["Monday"] == TimeRange(time(0, 0), time(23, 59))
+        assert hours["Monday"] == parse_time_range("12:00am-11:59pm")
 
     def test_parse_invalid_day_name(self, tmp_path):
         """Test handling invalid day names."""
         hours_file = tmp_path / "hours.txt"
         hours_file.write_text("InvalidDay 8:00am - 11:00pm")
-        with pytest.raises(ValueError, match="Invalid hours format"):
+        with pytest.raises(ValueError, match="No valid hours found in file"):
             parse_hours_file(str(hours_file))
 
     def test_parse_overlapping_ranges(self, tmp_path):
@@ -172,7 +172,7 @@ class TestHoursParser:
             "Wednesday - Friday 6:00pm - 11:00pm"
         )
         hours = parse_hours_file(str(hours_file))
-        assert hours["Wednesday"] == TimeRange(time(18, 0), time(23, 0))
+        assert hours["Wednesday"] == parse_time_range("6:00pm-11:00pm")
 
 # Showtime Calculation Tests (Enhanced)
 class TestShowtimeCalculation:

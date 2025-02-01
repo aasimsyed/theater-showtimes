@@ -19,34 +19,31 @@ def parse_time_range(time_str: str) -> TimeRange:
         raise ValueError(f"Invalid time range format: {time_str}") from exc
 
 def extract_day_and_times(line: str) -> Tuple[str, TimeRange]:
-    """Extract day part and time range from a line."""
-    try:
-        # Split on " - " to handle day ranges and time ranges
-        parts = [p.strip() for p in line.split(' - ')]
-        
-        if len(parts) == 3:  # Day range: "Monday - Wednesday 8:00am - 11:00pm"
-            day_part = f"{parts[0]} - {parts[1]}"
-            time_range = parse_time_range(parts[2])
-        elif len(parts) == 2:  # Single day: "Monday 8:00am - 11:00pm"
-            # Check if first part contains a time
-            if any(c.isdigit() for c in parts[0]):
-                day_part = parts[0].split()[0]
-                time_range = parse_time_range(f"{parts[0].split()[-1]}-{parts[1]}")
-            else:
-                day_part = parts[0]
-                time_range = parse_time_range(parts[1])
-        else:
-            raise ValueError("Invalid format")
-        
-        # Validate day names
-        day_words = [w.strip().lower() for w in day_part.split('-')]
-        if not all(d.strip() in weekdays for d in day_words if d.strip()):
-            raise ValueError("Invalid day name")
-            
-        return day_part, time_range
-        
-    except (ValueError, IndexError) as exc:
-        raise ValueError(f"Invalid line format: {line}") from exc
+    """Extract day and time information from a line."""
+    parts = line.strip().split(' ')
+    
+    # Handle two formats:
+    # 1. Day range: "Monday - Friday 9:00am - 11:30pm" (6 parts)
+    # 2. Single day: "Monday 9:00am - 11:30pm" (4 parts)
+    if len(parts) == 6 and parts[1] == '-' and parts[4] == '-':
+        day_part = f"{parts[0]} - {parts[2]}"
+        start_time = str_to_time(parts[3])
+        end_time = str_to_time(parts[5])
+    elif len(parts) == 4 and parts[2] == '-':
+        day_part = parts[0]
+        start_time = str_to_time(parts[1])
+        end_time = str_to_time(parts[3])
+    else:
+        raise ValueError(f"Invalid line format: {line}")
+    
+    # Validate day names
+    valid_days = {'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'}
+    days = [d.strip() for d in day_part.split('-')]
+    for day in days:
+        if day.strip() not in valid_days:
+            raise ValueError(f"Invalid day name: {day}")
+    
+    return day_part, TimeRange(start_time, end_time)
 
 def get_days_in_range(day_part: str) -> List[str]:
     """Get list of days in a range."""
