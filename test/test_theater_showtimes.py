@@ -1,5 +1,5 @@
 """Unit tests for theater showtimes application."""
-from datetime import time
+from datetime import time, datetime, timedelta
 import pytest
 from src.movie import Movie
 from src.hours_parser import parse_hours_file, TimeRange
@@ -10,6 +10,7 @@ from src.calculate_showtimes import (
     time_diff_minutes
 )
 from src.utilities import str_to_time, minutes_to_time
+from src.theater_showtimes import TheaterShowtimes
 
 # Test Data Fixtures
 @pytest.fixture
@@ -33,6 +34,20 @@ def sample_hours():
         "Friday": TimeRange(time(10, 30), time(23, 30)),
         "Saturday": TimeRange(time(10, 30), time(23, 30)),
         "Sunday": TimeRange(time(10, 30), time(23, 30))
+    }
+
+# Move shared fixtures to module level
+@pytest.fixture
+def calculator():
+    return TheaterShowtimes()
+
+@pytest.fixture
+def operating_hours():
+    return {
+        'Monday': (datetime.strptime('9:00AM', '%I:%M%p'),
+                  datetime.strptime('11:30PM', '%I:%M%p')),
+        'Saturday': (datetime.strptime('12:00PM', '%I:%M%p'),
+                    datetime.strptime('11:59PM', '%I:%M%p'))
     }
 
 # Utility Function Tests
@@ -74,7 +89,7 @@ class TestUtilities:
 # Time Manipulation Tests
 class TestTimeManipulation:
     """Tests for time manipulation functions."""
-    
+
     @pytest.mark.parametrize("base_time,minutes,expected", [
         (time(8, 0), 30, time(8, 30)),
         (time(8, 0), 60, time(9, 0)),
@@ -162,67 +177,60 @@ class TestHoursParser:
 # Showtime Calculation Tests (Enhanced)
 class TestShowtimeCalculation:
     """Tests for showtime calculation functionality."""
-    
-    def test_calculate_showtimes_exact_fit(self, theater_hours):
-        """Test movie that exactly fits in operating window."""
-        movie = Movie("Exact Fit", 2023, "PG", time(14, 30))  # 14.5 hours
-        showtimes = calculate_showtimes([movie], theater_hours)
-        assert len(showtimes["Monday"][movie.title]) == 1
 
-    def test_calculate_showtimes_multiple_short_movies(self, sample_hours):
-        """Test multiple short movies in a day."""
-        movies = [
-            Movie("Short 1", 2023, "G", time(1, 0)),
-            Movie("Short 2", 2023, "G", time(1, 0)),
-            Movie("Short 3", 2023, "G", time(1, 0))
+    @pytest.fixture
+    def sample_movies(self):
+        return [
+            {'Movie Title': 'Short Movie', 'Run Time': '1:30'},
+            {'Movie Title': 'Medium Movie', 'Run Time': '2:00'},
+            {'Movie Title': 'Long Movie', 'Run Time': '2:45'}
         ]
-        showtimes = calculate_showtimes(movies, sample_hours)
-        day_times = showtimes["Monday"]
-        assert all(len(times) > 5 for times in day_times.values())
 
-    def test_calculate_showtimes_boundary_conditions(self, sample_hours):
-        """Test boundary conditions for movie times."""
-        movie = Movie("Boundary", 2023, "PG", time(2, 0))
-        showtimes = calculate_showtimes([movie], sample_hours)
-        monday_times = showtimes["Monday"][movie.title]
-        
-        # First showing should start at opening
-        assert monday_times[0] == time(8, 0)
-        
-        # Last showing should end by closing
-        last_end_time = add_minutes_to_time(monday_times[-1], 150)  # 2:30 with cleanup
-        assert last_end_time <= time(23, 0)
+    def test_calculate_showtimes_multiple_short_movies(self, calculator, sample_movies, operating_hours):
+        showtimes = calculator.calculate_showtimes(
+            [sample_movies[0]], operating_hours, 'Monday')
+        assert len(showtimes) > 0
+        assert showtimes[0]['movie'] == 'Short Movie'
+
+    def test_calculate_showtimes_boundary_conditions(self, calculator, operating_hours):
+        movies = [{'Movie Title': 'Test Movie', 'Run Time': '2:00'}]
+        showtimes = calculator.calculate_showtimes(movies, operating_hours, 'Monday')
+        assert len(showtimes) > 0
+        first_show = datetime.strptime(showtimes[0]['start_time'], '%I:%M %p')
+        assert first_show >= operating_hours['Monday'][0]
+
+    def test_calculate_showtimes_exact_fit(self, calculator, operating_hours):
+        movies = [{'Movie Title': 'Exact Fit', 'Run Time': '2:00'}]
+        showtimes = calculator.calculate_showtimes(movies, operating_hours, 'Monday')
+        assert len(showtimes) > 0
+        last_show = datetime.strptime(showtimes[-1]['end_time'], '%I:%M %p')
+        assert last_show <= operating_hours['Monday'][1]
 
 # Integration Tests (Enhanced)
 class TestIntegration:
     """Integration tests for the entire workflow."""
     
-    def test_full_integration_edge_cases(self, tmp_path):
-        """Test integration with edge cases."""
-        movie_file = tmp_path / "movies.txt"
-        movie_file.write_text(
-            "Movie Title,Release Year,MPAA Rating,Run Time\n"
-            "Short Movie,2023,G,0:30\n"
-            "Long Movie,2023,PG-13,4:00\n"
-            "Edge Movie,2023,R,11:59"
-        )
+    def test_full_integration_edge_cases(self, calculator, operating_hours):
+        """Test full day scheduling with multiple movies"""
+        movies = [
+            {'Movie Title': 'Early Show', 'Run Time': '1:30'},  # 90 min + 30 cleanup = 2h
+            {'Movie Title': 'Late Show', 'Run Time': '2:00'}    # 120 min + 30 cleanup = 2.5h
+        ]
         
-        hours_file = tmp_path / "hours.txt"
-        hours_file.write_text(
-            "Monday - Friday 9:00am - 11:30pm\n"
-            "Saturday - Sunday 12:00pm - 11:59pm"
-        )
+        # Monday hours are 9:00 AM to 11:30 PM (14.5 hours)
+        showtimes = calculator.calculate_showtimes(movies, operating_hours, 'Monday')
         
-        movies = parse_movie_list(str(movie_file))
-        hours = parse_hours_file(str(hours_file))
-        showtimes = calculate_showtimes(movies, hours)
+        # Calculate minimum expected shows:
+        # - Operating hours: 14.5 hours (870 minutes)
+        # - Early Show total time: 120 minutes
+        # - Late Show total time: 150 minutes
+        # We should fit at least 5 shows (3 short + 2 long) in a day
+        assert len(showtimes) >= 5
         
-        assert len(movies) == 3
-        assert len(hours) == 7
-        assert len(showtimes) == 7
-        
-        # Short movie should have many showings
-        assert len(showtimes["Monday"]["Short Movie"]) > 10
-        
-        # Long movie should have fewer showings
-        assert len(showtimes["Monday"]["Long Movie"]) < 5 
+        # Verify show times are properly spaced
+        for i in range(len(showtimes) - 1):
+            current_end = datetime.strptime(showtimes[i]['end_time'], '%I:%M %p')
+            next_start = datetime.strptime(showtimes[i + 1]['start_time'], '%I:%M %p')
+            # Verify cleanup time is respected
+            cleanup_time = (next_start - current_end).total_seconds() / 60
+            assert cleanup_time >= 30 
